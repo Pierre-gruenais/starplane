@@ -35,20 +35,21 @@ const StarPlane = () => {
       event.preventDefault();
       isDragging = true;
       previousMousePosition = {
-        x: event.ClientX,
-        y: event.ClientY,
+        x: event.clientX,
+        y: event.clientY,
       };
     };
 
     const handleMouseMove = (event) => {
       if (!isDragging) return;
       const deltaMove = {
-        x: event.clientX,
-        y: event.clientY,
+        x: event.clientX - previousMousePosition.x,
+        y: event.clientY - previousMousePosition.y,
       };
 
-      spaceship.rotation.y += deltaMove.x * 0.01;
-      spaceship.rotation.x += deltaMove.y * 0.01;
+      const rotationSpeed = 0.01; // facteur de rotation
+      spaceship.rotation.y += deltaMove.x * rotationSpeed;
+      spaceship.rotation.x += deltaMove.y * rotationSpeed;
 
       previousMousePosition = {
         x: event.clientX,
@@ -61,7 +62,7 @@ const StarPlane = () => {
     };
 
     // Ajout des écouteurs d'événements
-    currentMount.addEventListener("mousedown", handleMouseDown);
+    mountRef.current.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
 
@@ -92,9 +93,7 @@ const StarPlane = () => {
 
     const animate = () => {
       requestAnimationFrame(animate);
-      if (isDragging) {
-        renderer.render(scene, camera);
-      }
+
       renderer.render(scene, camera);
     };
     animate();
@@ -141,7 +140,7 @@ const createSpaceship = () => {
 
   //Aile Gauche
   const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
-  leftWing.position.set(-1.2, -1.3, 0);
+  leftWing.position.set(-1.2, -0.3, 0);
   leftWing.rotation.z = Math.PI * 0.1;
   shipGroup.add(leftWing);
   // Aile droite
