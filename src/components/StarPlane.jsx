@@ -1,8 +1,11 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
-const StarPlane = () => {
+const ThreeScene = () => {
   const mountRef = useRef(null);
+  const sceneRef = useRef(null);
+  const spaceshipRef = useRef(null);
 
   useEffect(() => {
     const currentMount = mountRef.current;
@@ -10,11 +13,12 @@ const StarPlane = () => {
       console.error("Mount point not found");
       return;
     }
-
+    // création de la scene
     const scene = new THREE.Scene();
+    sceneRef.current = scene;
     scene.background = new THREE.Color(0x060c30);
 
-    //camera
+    // Camera
     const camera = new THREE.PerspectiveCamera(
       75,
       window.innerWidth / window.innerHeight,
@@ -23,11 +27,39 @@ const StarPlane = () => {
     );
     camera.position.z = 5;
 
-    const spaceship = createSpaceship();
-    spaceship.position.set(0, 0, 0);
-    scene.add(spaceship);
+    // Lumières d'éclairage de l'objet
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5, 5, 5);
+    scene.add(light);
 
-    // gestion rotation de drop a la souris
+    const ambientLight = new THREE.AmbientLight(0x404040);
+    scene.add(ambientLight);
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    currentMount.appendChild(renderer.domElement);
+
+    // // ajoute  objet 3D ici
+    // const object3D = new THREE.Group(); // Groupe vide pour votre futur objet
+    // scene.add(object3D);
+
+    //Chargement du modele GLB
+    const loader = new GLTFLoader();
+    loader.load(
+      "public/images/vaisseau.glb",
+      function (gltf) {
+        const model = gltf.scene;
+        model.position.set(0, 0, 0);
+        scene.add(model);
+        spaceshipRef.current = model;
+      },
+      undefined,
+      function (error) {
+        console.error("Erreur de chargement du modèle GLB: ", error);
+      }
+    );
+    // Gestion rotation à la souris
     let isDragging = false;
     let previousMousePosition = { x: -10, y: -10 };
 
@@ -47,9 +79,9 @@ const StarPlane = () => {
         y: event.clientY - previousMousePosition.y,
       };
 
-      const rotationSpeed = 0.01; // facteur de rotation
-      spaceship.rotation.y += deltaMove.x * rotationSpeed;
-      spaceship.rotation.x += deltaMove.y * rotationSpeed;
+      const rotationSpeed = 0.01;
+      scene.rotation.y += deltaMove.x * rotationSpeed;
+      scene.rotation.x += deltaMove.y * rotationSpeed;
 
       previousMousePosition = {
         x: event.clientX,
@@ -61,24 +93,12 @@ const StarPlane = () => {
       isDragging = false;
     };
 
-    // Ajout des écouteurs d'événements
-    mountRef.current.addEventListener("mousedown", handleMouseDown);
+    // Ajout des écouteurs d'événements des mouvements d ela souris
+    currentMount.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
 
-    // Ajoutez une lumière pour voir le vaisseau correctement
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(5, 5, 5);
-    scene.add(light);
-
-    const ambientLight = new THREE.AmbientLight(0x404040);
-    scene.add(ambientLight);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    currentMount.appendChild(renderer.domElement); // C majuscule ici
-
-    // Ajout d'étoiles
+    // Étoiles
     const starGeometry = new THREE.SphereGeometry(0.1, 24, 24);
     const starMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
@@ -91,13 +111,14 @@ const StarPlane = () => {
       scene.add(star);
     }
 
+    // Animation
     const animate = () => {
       requestAnimationFrame(animate);
-
       renderer.render(scene, camera);
     };
     animate();
 
+    // Gestion du redimensionnement
     const handleResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
@@ -105,6 +126,7 @@ const StarPlane = () => {
     };
     window.addEventListener("resize", handleResize);
 
+    // Nettoyage
     return () => {
       currentMount.removeEventListener("mousedown", handleMouseDown);
       window.removeEventListener("mousemove", handleMouseMove);
@@ -120,58 +142,4 @@ const StarPlane = () => {
   return <div ref={mountRef} className="w-full h-screen bg-black" />;
 };
 
-//creation vaisseau
-const createSpaceship = () => {
-  const shipGroup = new THREE.Group();
-
-  const cockpitGeometry = new THREE.SphereGeometry(1, 32, 32, 0, Math.PI / 1.5);
-  const cockpitMaterial = new THREE.MeshPhongMaterial({
-    color: 0x4444ff,
-    transparent: true,
-    opacity: 0.6,
-    shininess: 100,
-  });
-  const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
-  shipGroup.add(cockpit);
-
-  //Ailes
-  const wingGeometry = new THREE.BoxGeometry(2, 0.2, 1);
-  const wingMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 });
-
-  //Aile Gauche
-  const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
-  leftWing.position.set(-1.2, -0.3, 0);
-  leftWing.rotation.z = Math.PI * 0.1;
-  shipGroup.add(leftWing);
-  // Aile droite
-  const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
-  rightWing.position.set(1.2, -0.3, 0);
-  rightWing.rotation.z = -Math.PI * 0.1;
-  shipGroup.add(rightWing);
-
-  // Aileron
-  const finGeometry = new THREE.BoxGeometry(0.2, 1, 0.8);
-  const fin = new THREE.Mesh(finGeometry, wingMaterial);
-  fin.position.set(0, 0.5, -1);
-  shipGroup.add(fin);
-
-  // Réacteurs
-  const engineGeometry = new THREE.CylinderGeometry(0.3, 0.5, 1, 16);
-  const engineMaterial = new THREE.MeshPhongMaterial({ color: 0x666666 });
-
-  // Réacteur gauche
-  const leftEngine = new THREE.Mesh(engineGeometry, engineMaterial);
-  leftEngine.position.set(-0.5, -0.2, -1);
-  leftEngine.rotation.x = Math.PI * 0.5;
-  shipGroup.add(leftEngine);
-
-  // Réacteur droit
-  const rightEngine = new THREE.Mesh(engineGeometry, engineMaterial);
-  rightEngine.position.set(0.5, -0.2, -1);
-  rightEngine.rotation.x = Math.PI * 0.5;
-  shipGroup.add(rightEngine);
-
-  return shipGroup;
-};
-
-export default StarPlane;
+export default ThreeScene;
